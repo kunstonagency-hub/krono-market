@@ -326,6 +326,7 @@ export default function ProfileView({ user }) {
       </div>
     );
   };
+  
 
   // VISTA LOGIN
   if (!user) {
