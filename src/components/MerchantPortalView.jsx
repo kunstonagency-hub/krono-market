@@ -160,9 +160,8 @@ export default function MerchantPortalView() {
 
       if (ordErr) throw ordErr;
 
-      // 2. CUANDO EL RESTAURANTE DESPACHA: Consultar el PIN real directo de la BD
-      if (newStatus === 'En camino') {
-        // Consultamos la orden fresca para garantizar el PIN real del cliente
+      // 2. CUANDO EL COMERCIO KRONO ACEPTA EL PEDIDO (PREPARANDO): Llamar al motorizado de inmediato
+      if (newStatus === 'Preparando') {
         const { data: freshOrder } = await supabase
           .from('orders')
           .select('delivery_pin, customer_info, store_id')
@@ -182,7 +181,7 @@ export default function MerchantPortalView() {
             order_id: order.id,
             store_id: store.id,
             pickup_name: store.name,
-            pickup_address: store.address || 'Local del restaurante',
+            pickup_address: store.address || 'Local del comercio',
             pickup_lat: pLat,
             pickup_lng: pLng,
             customer_name: customerFullName,
@@ -190,20 +189,20 @@ export default function MerchantPortalView() {
             customer_address: order.customer_info?.direccion || 'Dirección de entrega',
             dropoff_lat: parseFloat(dropoffCoords.lat) || 10.3700,
             dropoff_lng: parseFloat(dropoffCoords.lng) || -66.9600,
-            delivery_pin: realDeliveryPin, // ¡PIN REAL ASEGURADO DESDE LA BD!
+            delivery_pin: realDeliveryPin,
             delivery_fee: 3.00,
-            status: 'buscando_motorizado'
+            status: 'buscando_motorizado' // ¡ESTO ENCIENDE EL RADAR EN EL RIDER!
           }]);
 
         if (riderErr) {
           console.error("Error alertando al rider:", riderErr);
           alert("Aviso motorizado: " + riderErr.message);
         } else {
-          alert(`¡Pedido despachado! Se ha enviado la alerta al rider con el PIN: ${realDeliveryPin}`);
+          alert(`¡Pedido aceptado! Se ha llamado al motorizado con éxito (PIN: ${realDeliveryPin})`);
         }
       }
 
-      // 3. Actualizar lista local de pedidos manteniendo los datos anteriores
+      // 3. Actualizar lista local de pedidos
       if (newStatus === 'Rechazado') {
         setOrders(prev => prev.filter(o => o.id !== order.id));
       } else {
