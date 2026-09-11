@@ -1,0 +1,628 @@
+:root {
+  font-family: 'Avenir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #0f172a;
+  background-color: #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #f8fafc;
+  overflow-x: hidden;
+}
+
+.market-layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Cabecera */
+.market-header {
+  background-color: #ffffff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 16px 20px;
+  width: 100%;
+}
+
+.header-content-wrapper {
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* Ajustes del Logo Principal */
+.desktop-brand-logo {
+  display: none;
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+}
+
+.desktop-nav {
+  display: none;
+  align-items: center;
+  gap: 32px;
+}
+
+.desktop-nav-item {
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.desktop-nav-item:hover, .desktop-nav-item.active {
+  color: #10b981;
+}
+
+.location-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.location-label {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.location-current {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 14px;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.cart-btn {
+  background-color: #f8fafc;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background-color 0.2s;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+}
+
+.cart-btn:hover {
+  background-color: #f1f5f9;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background-color: #10b981;
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.search-icon {
+  position: absolute;
+  left: 16px;
+  color: #94a3b8;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 12px 12px 48px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  border-color: #10b981;
+}
+
+/* Contenido Principal */
+.market-main {
+  flex: 1;
+  padding: 24px 20px;
+  padding-bottom: 90px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.view-all-btn {
+  background: none;
+  border: none;
+  color: #10b981;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Banners */
+.banners-section {
+  margin-bottom: 32px;
+}
+
+.banners-container {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+
+.promo-card {
+  min-width: 320px;
+  height: 160px;
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.promo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Categorías */
+.categories-section {
+  margin-bottom: 40px;
+}
+
+.categories-container {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 8px 0; 
+  scroll-snap-type: none; 
+}
+
+.category-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  min-width: 80px;
+}
+
+.category-icon-wrapper {
+  background-color: #ffffff;
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.category-item:hover .category-icon-wrapper {
+  transform: translateY(-4px);
+  border-color: #10b981;
+}
+
+.category-svg {
+  width: 34px;
+  height: 34px;
+  color: #0f172a;
+  transition: color 0.2s;
+}
+
+.category-item:hover .category-svg {
+  color: #10b981;
+}
+
+.category-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Platos */
+.suggested-section {
+  margin-bottom: 40px;
+}
+
+.dishes-container {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+
+.dish-card {
+  min-width: 260px;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.dish-img-container {
+  height: 140px;
+  width: 100%;
+}
+
+.dish-img-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dish-info {
+  padding: 16px;
+}
+
+.dish-info h4 {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.dish-info p {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.dish-price {
+  font-size: 16px;
+  font-weight: 800;
+  color: #10b981;
+}
+
+/* Comercios */
+.featured-restaurants-section, .all-restaurants-section {
+  margin-bottom: 48px;
+}
+
+.all-restaurants-section .section-title {
+  margin-bottom: 24px;
+}
+
+.restaurant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.restaurant-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+  position: relative;
+}
+
+.restaurant-card.featured {
+  border: 2px solid #10b981;
+}
+
+.restaurant-card:hover {
+  transform: translateY(-4px);
+  border-color: #0f172a;
+}
+
+.restaurant-image-container {
+  position: relative;
+  height: 180px;
+  width: 100%;
+}
+
+.restaurant-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.promoted-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background-color: #0f172a;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.fiskal-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background-color: #10b981;
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.restaurant-info {
+  padding: 20px;
+}
+
+.restaurant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.restaurant-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+  font-size: 12px;
+  color: #0f172a;
+}
+
+.restaurant-category {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+.restaurant-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meta-dot {
+  color: #cbd5e1;
+}
+
+/* FOOTER SÓLIDO (Desktop) */
+.market-footer {
+  background-color: #0f172a;
+  color: #ffffff;
+  padding: 48px 20px 24px;
+  display: none;
+}
+
+.footer-content {
+  max-width: 1440px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 32px;
+  margin-bottom: 48px;
+}
+
+/* Ajustes del Logo en el Footer */
+.footer-brand-logo {
+  height: 48px;
+  width: auto;
+  margin-bottom: 16px;
+  filter: brightness(0) invert(1); /* Vuelve el logo blanco para que resalte en fondo oscuro */
+}
+
+.footer-brand p {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-links a {
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.footer-links a:hover {
+  color: #10b981;
+}
+
+.footer-bottom {
+  max-width: 1440px;
+  margin: 0 auto;
+  border-top: 1px solid #1e293b;
+  padding-top: 24px;
+  text-align: center;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Barra Móvil */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background-color: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 100;
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nav-btn.active {
+  color: #10b981;
+}
+
+/* RESPONSIVE DESKTOP */
+@media (min-width: 768px) {
+  .market-header {
+    padding: 24px 40px;
+  }
+  .header-content-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 48px;
+  }
+  .header-top {
+    margin-bottom: 0;
+    flex: 1;
+  }
+  .mobile-menu-btn {
+    display: none;
+  }
+  .desktop-brand-logo {
+    display: block; /* Muestra el logo en PC */
+  }
+  .desktop-nav {
+    display: flex;
+  }
+  .search-container {
+    max-width: 400px;
+    width: 100%;
+  }
+  .bottom-nav {
+    display: none;
+  }
+  .market-main {
+    padding: 48px 40px;
+    padding-bottom: 64px;
+  }
+  .promo-card {
+    min-width: 420px;
+    height: 200px;
+  }
+  .market-footer {
+    display: block; 
+  }
+}

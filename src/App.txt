@@ -1,0 +1,1146 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Search, ShoppingBag, MapPin, Clock, Star, ChevronRight, Menu, Home, User, TrendingUp, Flame, Trash2, LogOut, CreditCard, Banknote, History, CheckCircle } from 'lucide-react';
+import { banners, infiniteCategories } from './data';
+import { supabase } from './supabase';
+import './App.css';
+
+// =========================================================================
+// 1. COMPONENTES DE ESTRUCTURA CON ENRUTAMIENTO REAL
+// =========================================================================
+
+const Header = ({ cartCount, searchQuery, setSearchQuery }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleSearchInput = (e) => {
+    setSearchQuery(e.target.value);
+    if (e.target.value.length > 0 && location.pathname !== '/buscar') {
+      navigate('/buscar');
+    } else if (e.target.value.length === 0 && location.pathname === '/buscar') {
+      navigate('/');
+    }
+  };
+
+  return (
+    <header className="market-header">
+      <div className="header-content-wrapper">
+        <div className="header-top">
+          <button className="icon-btn mobile-menu-btn"><Menu size={24} color="#0f172a" /></button>
+          <img src="/krono-market-logo.svg" alt="Krono Market" className="desktop-brand-logo" onClick={() => navigate('/')} style={{cursor: 'pointer'}} />
+          <div className="location-selector">
+            <span className="location-label">Entregar en</span>
+            <div className="location-current">
+              <MapPin size={16} color="#10b981" />
+              <span>San Antonio de Los Altos</span>
+              <ChevronRight size={16} color="#0f172a" />
+            </div>
+          </div>
+          <nav className="desktop-nav">
+            <button className={`desktop-nav-item ${location.pathname === '/' ? 'active' : ''}`} onClick={() => navigate('/')}><Home size={18} /> Inicio</button>
+            <button className={`desktop-nav-item ${location.pathname === '/perfil' ? 'active' : ''}`} onClick={() => navigate('/perfil')}><User size={18} /> Perfil</button>
+          </nav>
+          <button className="icon-btn cart-btn" onClick={() => navigate('/carrito')}>
+            <ShoppingBag size={24} color="#0f172a" />
+            {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
+          </button>
+        </div>
+        <div className="search-container">
+          <Search size={20} className="search-icon" />
+          <input 
+            type="text" 
+            placeholder="Buscar comercios o categorías..." 
+            className="search-input" 
+            value={searchQuery}
+            onChange={handleSearchInput}
+          />
+        </div>
+      </div>
+    </header>
+  );
+};
+
+const BottomNav = ({ cartCount }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentPath = location.pathname;
+
+  return (
+    <nav className="bottom-nav">
+      <button className={`nav-btn ${currentPath === '/' ? 'active' : ''}`} onClick={() => navigate('/')}>
+        <Home size={24} /><span>Inicio</span>
+      </button>
+      <button className={`nav-btn ${currentPath === '/buscar' ? 'active' : ''}`} onClick={() => navigate('/buscar')}>
+        <Search size={24} /><span>Buscar</span>
+      </button>
+      <button className={`nav-btn ${currentPath === '/carrito' ? 'active' : ''}`} onClick={() => navigate('/carrito')}>
+        <div style={{position: 'relative'}}>
+          <ShoppingBag size={24} />
+          {cartCount > 0 && <span style={{position: 'absolute', top: '-6px', right: '-10px', background: '#10b981', color: 'white', fontSize: '10px', fontWeight: 'bold', width: '16px', height: '16px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>{cartCount}</span>}
+        </div>
+        <span>Pedidos</span>
+      </button>
+      <button className={`nav-btn ${currentPath === '/perfil' ? 'active' : ''}`} onClick={() => navigate('/perfil')}>
+        <User size={24} /><span>Perfil</span>
+      </button>
+    </nav>
+  );
+};
+
+const Footer = () => (
+  <footer className="market-footer">
+    <div className="footer-content">
+      <div className="footer-brand">
+        <img src="/krono-market-logo.svg" alt="Krono Market" className="footer-brand-logo" />
+        <p>Delivery rápido, tecnología local.</p>
+      </div>
+      <div className="footer-links">
+        <a href="#">Términos y Condiciones</a>
+        <a href="#">Soporte</a>
+        <a href="#">Asocia tu Comercio</a>
+      </div>
+    </div>
+    <div className="footer-bottom">
+      <p>&copy; 2026 Krono Ecosystem. Desarrollado e integrado con Fiskal.</p>
+    </div>
+  </footer>
+);
+
+// =========================================================================
+// 2. VISTAS DE PÁGINAS
+// =========================================================================
+
+const HomeView = ({ setSearchQuery, addToCart, suggestedDishes, featuredRestaurants, allRestaurants, loading }) => {
+  const navigate = useNavigate();
+  const bannerRef = useRef(null);
+  const suggestedRef = useRef(null);
+  const categoryRef = useRef(null);
+  const [isCategoryPaused, setIsCategoryPaused] = useState(false);
+
+  useEffect(() => {
+    const jumpInterval = setInterval(() => {
+      [bannerRef, suggestedRef].forEach(ref => {
+        if (ref.current) {
+          const { scrollLeft, scrollWidth, clientWidth } = ref.current;
+          if (scrollLeft + clientWidth >= scrollWidth - 10) {
+            ref.current.scrollTo({ left: 0, behavior: 'smooth' });
+          } else {
+            ref.current.scrollTo({ left: scrollLeft + clientWidth, behavior: 'smooth' });
+          }
+        }
+      });
+    }, 4000);
+
+    const slowInterval = setInterval(() => {
+      if (categoryRef.current && !isCategoryPaused) {
+        const { scrollWidth } = categoryRef.current;
+        categoryRef.current.scrollLeft += 1;
+        
+        if (categoryRef.current.scrollLeft >= scrollWidth / 2) {
+          categoryRef.current.scrollLeft -= scrollWidth / 2;
+        }
+      }
+    }, 35); 
+
+    return () => {
+      clearInterval(jumpInterval);
+      clearInterval(slowInterval);
+    };
+  }, [isCategoryPaused]);
+
+  if (loading) {
+    return (
+      <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh'}}>
+        <h3 style={{color: '#10b981'}}>Cargando comercios...</h3>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <section className="banners-section">
+        <div className="banners-container hide-scrollbar" ref={bannerRef}>
+          {banners.map(banner => (
+            <div key={banner.id} className="promo-card">
+              <img src={banner.img} alt={banner.alt} className="promo-img" />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="categories-section">
+        <div 
+          className="categories-container hide-scrollbar" 
+          ref={categoryRef}
+          onMouseEnter={() => setIsCategoryPaused(true)}
+          onMouseLeave={() => setIsCategoryPaused(false)}
+          onTouchStart={() => setIsCategoryPaused(true)}
+          onTouchEnd={() => setIsCategoryPaused(false)}
+        >
+          {infiniteCategories.map((cat, index) => (
+            <div key={`${cat.id}-${index}`} className="category-item" onClick={() => {
+              setSearchQuery(cat.name);
+              navigate('/buscar');
+            }}>
+              <div className="category-icon-wrapper">
+                <div className="category-svg">{cat.icon}</div>
+              </div>
+              <span className="category-name">{cat.name}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="suggested-section">
+        <div className="section-header">
+          <h2 className="section-title"><Flame size={20} color="#10b981" /> Sugerencias del Día</h2>
+          <button className="view-all-btn">Ver todos</button>
+        </div>
+        <div className="dishes-container hide-scrollbar" ref={suggestedRef}>
+          {suggestedDishes.map(dish => (
+            <div key={dish.id} className="dish-card" onClick={() => addToCart(dish)}>
+              <div className="dish-img-container">
+                <img src={dish.img} alt={dish.name} />
+              </div>
+              <div className="dish-info">
+                <h4>{dish.name}</h4>
+                <p>{dish.restaurant}</p>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                  <div style={{display: 'flex', flexDirection: 'column'}}>
+                    {dish.originalPrice && (
+                      <span style={{textDecoration: 'line-through', color: '#94a3b8', fontSize: '10px'}}>
+                        ${dish.originalPrice.toFixed(2)}
+                      </span>
+                    )}
+                    <span className="dish-price">${dish.price.toFixed(2)}</span>
+                  </div>
+                  <button style={{background: '#10b981', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'}}>+ Agregar</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="featured-restaurants-section">
+        <div className="section-header">
+          <h2 className="section-title"><TrendingUp size={20} color="#10b981" /> Destacados</h2>
+        </div>
+        <div className="restaurant-grid">
+          {featuredRestaurants.map(rest => (
+            <div key={rest.id} className="restaurant-card featured">
+              <div className="restaurant-image-container">
+                <img src={rest.img} alt={rest.name} className="restaurant-img" />
+                <div className="promoted-badge">AD</div>
+                {rest.is_fiskal && <div className="fiskal-badge">TASA PREFERENCIAL</div>}
+              </div>
+              <div className="restaurant-info">
+                <div className="restaurant-header">
+                  <h3 className="restaurant-name">{rest.name}</h3>
+                  <div className="rating">
+                    <Star size={14} className="star-icon" fill="#10b981" color="#10b981" />
+                    <span>{rest.rating}</span>
+                  </div>
+                </div>
+                <p className="restaurant-category">{rest.category}</p>
+                <div className="restaurant-meta">
+                  <div className="meta-item"><Clock size={14} /><span>{rest.time}</span></div>
+                  <span className="meta-dot">•</span>
+                  <div className="meta-item"><span>Envío ${Number(rest.delivery).toFixed(2)}</span></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="all-restaurants-section">
+        <h2 className="section-title">Todos los Comercios</h2>
+        <div className="restaurant-grid">
+          {allRestaurants.map(rest => (
+            <div key={rest.id} className="restaurant-card">
+              <div className="restaurant-image-container">
+                <img src={rest.img} alt={rest.name} className="restaurant-img" />
+                {rest.is_fiskal && <div className="fiskal-badge">TASA PREFERENCIAL</div>}
+              </div>
+              <div className="restaurant-info">
+                <div className="restaurant-header">
+                  <h3 className="restaurant-name">{rest.name}</h3>
+                  <div className="rating">
+                    <Star size={14} className="star-icon" fill="#10b981" color="#10b981" />
+                    <span>{rest.rating}</span>
+                  </div>
+                </div>
+                <p className="restaurant-category">{rest.category}</p>
+                <div className="restaurant-meta">
+                  <div className="meta-item"><Clock size={14} /><span>{rest.time}</span></div>
+                  <span className="meta-dot">•</span>
+                  <div className="meta-item"><span>Envío ${Number(rest.delivery).toFixed(2)}</span></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+};
+
+const SearchView = ({ filteredRestaurants }) => (
+  <section className="search-results-section">
+    <h2 className="section-title">Resultados de Búsqueda</h2>
+    {filteredRestaurants.length > 0 ? (
+      <div className="restaurant-grid">
+        {filteredRestaurants.map(rest => (
+          <div key={`search-${rest.id}`} className="restaurant-card">
+            <div className="restaurant-image-container">
+              <img src={rest.img} alt={rest.name} className="restaurant-img" />
+              {rest.is_fiskal && <div className="fiskal-badge">TASA PREFERENCIAL</div>}
+            </div>
+            <div className="restaurant-info">
+              <div className="restaurant-header">
+                <h3 className="restaurant-name">{rest.name}</h3>
+                <div className="rating">
+                  <Star size={14} className="star-icon" fill="#10b981" color="#10b981" />
+                  <span>{rest.rating}</span>
+                </div>
+              </div>
+              <p className="restaurant-category">{rest.category}</p>
+              <div className="restaurant-meta">
+                <div className="meta-item"><Clock size={14} /><span>{rest.time}</span></div>
+                <span className="meta-dot">•</span>
+                <div className="meta-item"><span>Envío ${Number(rest.delivery).toFixed(2)}</span></div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div style={{textAlign: 'center', padding: '40px 20px', color: '#64748b'}}>
+        <Search size={48} style={{opacity: 0.2, marginBottom: '16px'}} />
+        <h3>No encontramos comercios</h3>
+        <p>Intenta buscar con otras palabras o categorías.</p>
+      </div>
+    )}
+  </section>
+);
+
+const CartView = ({ cart, removeFromCart, cartTotal, user, clearCart }) => {
+  const navigate = useNavigate();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('pago_movil');
+  const [reference, setReference] = useState('');
+  
+  // Estado para capturar los datos del cliente
+  const [customerData, setCustomerData] = useState({
+    nombre: '',
+    apellido: '',
+    cedula: '',
+    telefono: '',
+    direccion: '',
+    coordenadas: null
+  });
+  const [isLocating, setIsLocating] = useState(false);
+
+  // CORRECTO: Cargar datos automáticamente de forma segura al abrir el modal
+  useEffect(() => {
+    if (showPaymentModal && user) {
+      const fetchUserProfileAndAddress = async () => {
+        try {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          const { data: addressData } = await supabase
+            .from('saved_addresses')
+            .select('*')
+            .eq('user_id', user.id)
+            .limit(1);
+
+          setCustomerData(prev => ({
+            ...prev,
+            nombre: profileData?.nombre || prev.nombre,
+            apellido: profileData?.apellido || prev.apellido,
+            cedula: profileData?.cedula || prev.cedula,
+            telefono: profileData?.telefono || prev.telefono || profileData?.phone || '',
+            direccion: addressData?.[0]?.direccion || prev.direccion,
+            coordenadas: addressData?.[0]?.lat ? { lat: addressData[0].lat, lng: addressData[0].lng } : prev.coordenadas
+          }));
+        } catch (err) {
+          console.log("No se pudieron cargar los datos automáticos:", err.message);
+        }
+      };
+      
+      fetchUserProfileAndAddress();
+    }
+  }, [showPaymentModal, user]);
+
+  const initiateCheckout = () => {
+    if (!user) {
+      alert("Por favor, inicia sesión para confirmar tu pedido.");
+      navigate('/perfil');
+      return;
+    }
+    setShowPaymentModal(true);
+  };
+
+  const handleGetLocation = () => {
+    setIsLocating(true);
+    if (!navigator.geolocation) {
+      alert("Tu navegador o dispositivo no soporta geolocalización.");
+      setIsLocating(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCustomerData(prev => ({
+          ...prev,
+          coordenadas: {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }
+        }));
+        setIsLocating(false);
+      },
+      (error) => {
+        console.error("Error GPS:", error);
+        alert("No pudimos obtener tu ubicación. Por favor, asegúrate de tener el GPS encendido.");
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  const handleFinalCheckout = async (e) => {
+    e.preventDefault();
+    if ((paymentMethod === 'pago_movil' || paymentMethod === 'zelle') && !reference.trim()) {
+      alert("Por favor, ingresa el número de referencia del pago.");
+      return;
+    }
+
+    if (!customerData.nombre || !customerData.apellido || !customerData.cedula || !customerData.telefono || !customerData.direccion) {
+      alert("Por favor, completa todos tus datos personales y una dirección escrita para la entrega.");
+      return;
+    }
+
+    const orderStoreId = cart[0]?.store_id;
+    
+    if (!orderStoreId) {
+      alert("Error: El producto seleccionado no tiene asociado el ID de su comercio de origen. Intenta eliminarlo del carrito y agregarlo nuevamente.");
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .insert([
+          { 
+            user_id: user.id, 
+            total_amount: cartTotal, 
+            items: cart,
+            status: 'Pendiente',
+            payment_method: paymentMethod,
+            payment_reference: reference,
+            store_id: orderStoreId,
+            customer_info: customerData
+          }
+        ]);
+
+      if (error) throw error;
+      
+      alert("¡Pedido confirmado con éxito! Krono Market lo está procesando.");
+      clearCart();
+      setShowPaymentModal(false);
+      navigate('/perfil'); 
+    } catch (error) {
+      alert("Hubo un error al procesar el pedido: " + error.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setCustomerData({
+      ...customerData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  return (
+    <section className="cart-section">
+      <h2 className="section-title">Tu Pedido</h2>
+      
+      {showPaymentModal && (
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', overflowY: 'auto'}}>
+          <div style={{background: '#fff', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '450px', maxHeight: '90vh', overflowY: 'auto'}}>
+            <h3 style={{marginBottom: '16px'}}>Confirma tus Datos y Pago</h3>
+            <form onSubmit={handleFinalCheckout}>
+              
+              <div style={{marginBottom: '20px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
+                  <h4 style={{margin: 0, fontSize: '14px', color: '#0f172a'}}>Datos de Facturación</h4>
+                  <span style={{fontSize: '11px', background: '#d1fae5', color: '#059669', padding: '2px 8px', borderRadius: '6px', fontWeight: 'bold'}}>✨ Auto-cargado</span>
+                </div>
+                
+                <div style={{display: 'flex', gap: '8px', marginBottom: '8px'}}>
+                  <input type="text" name="nombre" placeholder="Nombre" value={customerData.nombre} onChange={handleInputChange} style={{flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%'}} required />
+                  <input type="text" name="apellido" placeholder="Apellido" value={customerData.apellido} onChange={handleInputChange} style={{flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%'}} required />
+                </div>
+                
+                <div style={{marginBottom: '8px'}}>
+                  <input type="text" name="cedula" placeholder="Cédula (Ej. V-12345678)" value={customerData.cedula} onChange={handleInputChange} style={{width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1'}} required />
+                </div>
+                
+                <div style={{marginBottom: '16px'}}>
+                  <input type="tel" name="telefono" placeholder="Teléfono" value={customerData.telefono} onChange={handleInputChange} style={{width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1'}} required />
+                </div>
+
+                <h4 style={{marginBottom: '12px', fontSize: '14px', color: '#0f172a', borderTop: '1px solid #e2e8f0', paddingTop: '16px'}}>Lugar de Entrega</h4>
+                
+                <div style={{marginBottom: '8px'}}>
+                  <textarea name="direccion" placeholder="Dirección escrita (Ej. Urb. El Picacho, Res. Los Pinos)" value={customerData.direccion} onChange={handleInputChange} style={{width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', resize: 'vertical', minHeight: '60px'}} required />
+                </div>
+
+                <div style={{marginBottom: '8px'}}>
+                  <button 
+                    type="button" 
+                    onClick={handleGetLocation} 
+                    disabled={isLocating} 
+                    style={{
+                      width: '100%', 
+                      padding: '10px', 
+                      background: customerData.coordenadas ? '#d1fae5' : '#f1f5f9', 
+                      color: customerData.coordenadas ? '#059669' : '#475569', 
+                      border: `1px solid ${customerData.coordenadas ? '#10b981' : '#cbd5e1'}`, 
+                      borderRadius: '8px', 
+                      fontWeight: 'bold', 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      gap: '8px'
+                    }}
+                  >
+                    <MapPin size={18} />
+                    {isLocating ? 'Buscando satélite...' : (customerData.coordenadas ? '¡Ubicación GPS sincronizada!' : 'Obtener ubicación GPS actual')}
+                  </button>
+                  {!customerData.coordenadas && <p style={{fontSize: '11px', color: '#94a3b8', marginTop: '4px', textAlign: 'center'}}>Se usará tu dirección guardada o GPS actual.</p>}
+                </div>
+
+              </div>
+
+              <div style={{display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px'}}>
+                <label style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', border: paymentMethod === 'pago_movil' ? '2px solid #10b981' : '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer'}}>
+                  <input type="radio" name="payment" value="pago_movil" checked={paymentMethod === 'pago_movil'} onChange={() => setPaymentMethod('pago_movil')} />
+                  <Banknote size={20} color={paymentMethod === 'pago_movil' ? '#10b981' : '#64748b'} />
+                  <span style={{fontWeight: 'bold'}}>Pago Móvil</span>
+                </label>
+                <label style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', border: paymentMethod === 'zelle' ? '2px solid #10b981' : '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer'}}>
+                  <input type="radio" name="payment" value="zelle" checked={paymentMethod === 'zelle'} onChange={() => setPaymentMethod('zelle')} />
+                  <CreditCard size={20} color={paymentMethod === 'zelle' ? '#10b981' : '#64748b'} />
+                  <span style={{fontWeight: 'bold'}}>Zelle</span>
+                </label>
+                <label style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', border: paymentMethod === 'efectivo' ? '2px solid #10b981' : '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer'}}>
+                  <input type="radio" name="payment" value="efectivo" checked={paymentMethod === 'efectivo'} onChange={() => setPaymentMethod('efectivo')} />
+                  <Banknote size={20} color={paymentMethod === 'efectivo' ? '#10b981' : '#64748b'} />
+                  <span style={{fontWeight: 'bold'}}>Efectivo (Al recibir)</span>
+                </label>
+              </div>
+
+              {paymentMethod !== 'efectivo' && (
+                <div style={{marginBottom: '20px'}}>
+                  <label style={{display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold'}}>Número de Referencia</label>
+                  <input 
+                    type="text" 
+                    value={reference} 
+                    onChange={(e) => setReference(e.target.value)}
+                    placeholder="Ej. 12345678"
+                    style={{width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0'}}
+                    required
+                  />
+                </div>
+              )}
+
+              <div style={{display: 'flex', gap: '12px'}}>
+                <button type="button" onClick={() => setShowPaymentModal(false)} style={{flex: 1, padding: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'}}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={isProcessing} style={{flex: 1, padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'}}>
+                  {isProcessing ? 'Enviando...' : 'Pagar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {cart.length > 0 ? (
+        <div>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px'}}>
+            {cart.map(item => (
+              <div key={item.cartId} style={{display: 'flex', alignItems: 'center', background: '#fff', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0'}}>
+                <img src={item.img} alt={item.name} style={{width: '60px', height: '60px', borderRadius: '12px', objectFit: 'cover', marginRight: '16px'}} />
+                <div style={{flex: 1}}>
+                  <h4 style={{fontSize: '14px', fontWeight: 800, marginBottom: '4px'}}>{item.name}</h4>
+                  <p style={{fontSize: '12px', color: '#64748b'}}>{item.restaurant}</p>
+                </div>
+                <div style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
+                  <span style={{fontWeight: 800, color: '#10b981'}}>${Number(item.price).toFixed(2)}</span>
+                  <button onClick={() => removeFromCart(item.cartId)} style={{background: '#fee2e2', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', color: '#ef4444'}}>
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{background: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '14px', color: '#64748b'}}>
+              <span>Subtotal</span>
+              <span>${cartTotal.toFixed(2)}</span>
+            </div>
+            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '24px', fontSize: '18px', fontWeight: 900, color: '#0f172a', borderTop: '1px solid #e2e8f0', paddingTop: '16px'}}>
+              <span>Total a Pagar</span>
+              <span style={{color: '#10b981'}}>${cartTotal.toFixed(2)}</span>
+            </div>
+            <button 
+              onClick={initiateCheckout} 
+              disabled={isProcessing}
+              style={{width: '100%', background: '#10b981', color: '#fff', border: 'none', padding: '16px', borderRadius: '16px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', opacity: isProcessing ? 0.7 : 1}}
+            >
+              Procesar Pago
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{textAlign: 'center', padding: '60px 20px', color: '#64748b'}}>
+          <ShoppingBag size={64} style={{opacity: 0.2, marginBottom: '16px'}} />
+          <h3 style={{fontSize: '18px', color: '#0f172a', marginBottom: '8px'}}>Tu carrito está vacío</h3>
+          <p style={{marginBottom: '24px'}}>¡Anímate a explorar nuestras sugerencias del día!</p>
+          <button onClick={() => navigate('/')} style={{background: '#10b981', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer'}}>Explorar Comercios</button>
+        </div>
+      )}
+    </section>
+  );
+};
+
+const ProfileView = ({ user }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [myOrders, setMyOrders] = useState([]);
+  const [activeTab, setActiveTab] = useState('orders'); // 'orders' o 'addresses'
+
+  // Estados para el formulario de Perfil / Datos Personales
+  const [profileData, setProfileData] = useState({
+    nombre: '',
+    apellido: '',
+    cedula: '',
+    telefono: ''
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  // Estados para la libreta de direcciones
+  const [addresses, setAddresses] = useState([]);
+  const [newAddressText, setNewAddressText] = useState('');
+  const [newCoords, setNewCoords] = useState(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [showAddAddressModal, setShowAddAddressModal] = useState(false);
+
+  // Cargar datos al iniciar sesión
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchUserData = async () => {
+      // 1. Cargar pedidos
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (ordersData) setMyOrders(ordersData);
+
+      // 2. Cargar perfil
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (prof) {
+        setProfileData({
+          nombre: prof.nombre || '',
+          apellido: prof.apellido || '',
+          cedula: prof.cedula || '',
+          telefono: prof.telefono || ''
+        });
+      }
+
+      // 3. Cargar direcciones guardadas
+      const { data: addrs } = await supabase
+        .from('saved_addresses')
+        .select('*')
+        .eq('user_id', user.id);
+      if (addrs) setAddresses(addrs);
+    };
+
+    fetchUserData();
+
+    // Suscripción WebSockets para pedidos en vivo
+    const ordersSubscription = supabase
+      .channel('krono-orders-updates')
+      .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'orders',
+          filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        setMyOrders(currentOrders => 
+          currentOrders.map(order => order.id === payload.new.id ? payload.new : order)
+        );
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ordersSubscription);
+    };
+  }, [user]);
+
+  const handleProfileChange = (e) => {
+    setProfileData({ ...profileData, [e.target.name]: e.target.value });
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setSavingProfile(true);
+
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        ...profileData,
+        updated_at: new Date()
+      });
+
+    if (error) {
+      alert("Error al guardar perfil: " + error.message);
+    } else {
+      alert("¡Datos personales guardados con éxito! Se usarán automáticamente al pagar.");
+    }
+    setSavingProfile(false);
+  };
+
+  const handleGetLocationForAddress = () => {
+    setIsLocating(true);
+    if (!navigator.geolocation) {
+      alert("Geolocalización no soportada.");
+      setIsLocating(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setNewCoords({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+        setIsLocating(false);
+        alert("¡Ubicación GPS capturada con éxito!");
+      },
+      (error) => {
+        alert("Error obteniendo GPS: " + error.message);
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  const handleSaveAddress = async (e) => {
+    e.preventDefault();
+    if (!newAddressText.trim()) {
+      alert("Escribe una descripción para la dirección.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('saved_addresses')
+      .insert([
+        {
+          user_id: user.id,
+          direccion: newAddressText,
+          lat: newCoords?.lat || null,
+          lng: newCoords?.lng || null
+        }
+      ])
+      .select();
+
+    if (error) {
+      alert("Error al guardar dirección: " + error.message);
+    } else {
+      if (data) setAddresses([...addresses, data[0]]);
+      setNewAddressText('');
+      setNewCoords(null);
+      setShowAddAddressModal(false);
+      alert("¡Dirección guardada en tu libreta!");
+    }
+  };
+
+  const handleDeleteAddress = async (id) => {
+    const { error } = await supabase
+      .from('saved_addresses')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      setAddresses(addresses.filter(a => a.id !== id));
+    }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) alert(error.message);
+    setLoading(false);
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) alert(error.message);
+    else alert('¡Registro exitoso! Ya puedes iniciar sesión.');
+    setLoading(false);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  const getStatusColor = (status) => {
+    switch(status?.toLowerCase()) {
+      case 'pendiente': return '#f59e0b';
+      case 'preparando': return '#3b82f6';
+      case 'en camino': return '#8b5cf6';
+      case 'entregado': return '#10b981';
+      case 'rechazado': return '#ef4444';
+      default: return '#64748b';
+    }
+  };
+
+  if (!user) {
+    return (
+      <section className="profile-section" style={{maxWidth: '400px', margin: '0 auto'}}>
+        <h2 className="section-title" style={{justifyContent: 'center', marginBottom: '24px'}}>Acceso a Krono</h2>
+        <div style={{background: '#fff', padding: '32px 24px', borderRadius: '16px', border: '1px solid #e2e8f0'}}>
+          <form onSubmit={handleLogin}>
+            <input 
+              type="email" 
+              placeholder="Correo electrónico" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px', fontSize: '14px', outline: 'none'}}
+              required
+            />
+            <input 
+              type="password" 
+              placeholder="Contraseña" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px', fontSize: '14px', outline: 'none'}}
+              required
+            />
+            <button 
+              type="submit" 
+              disabled={loading}
+              style={{width: '100%', background: '#10b981', color: '#fff', border: 'none', padding: '14px', borderRadius: '12px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', marginBottom: '12px'}}
+            >
+              {loading ? 'Cargando...' : 'Iniciar Sesión'}
+            </button>
+            <button 
+              type="button" 
+              onClick={handleRegister}
+              disabled={loading}
+              style={{width: '100%', background: '#f8fafc', color: '#0f172a', border: '1px solid #e2e8f0', padding: '14px', borderRadius: '12px', fontSize: '14px', fontWeight: 800, cursor: 'pointer'}}
+            >
+              Crear una cuenta nueva
+            </button>
+          </form>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="profile-section">
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px'}}>
+        <h2 className="section-title" style={{margin: 0}}>Mi Perfil</h2>
+        <button onClick={handleLogout} style={{background: 'none', border: 'none', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', cursor: 'pointer'}}>
+          <LogOut size={18} /> Salir
+        </button>
+      </div>
+      
+      <div style={{background: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', textAlign: 'center', marginBottom: '24px'}}>
+        <div style={{width: '80px', height: '80px', background: '#10b981', borderRadius: '50%', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff'}}>
+          <User size={40} />
+        </div>
+        <h3 style={{fontSize: '20px', fontWeight: 800, marginBottom: '4px'}}>Cliente Krono</h3>
+        <p style={{color: '#64748b', fontSize: '14px', margin: 0}}>{user.email}</p>
+      </div>
+
+      {/* FORMULARIO DE DATOS PERSONALES */}
+      <div style={{background: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '24px'}}>
+        <h3 style={{fontSize: '16px', marginBottom: '16px', color: '#0f172a'}}>Mis Datos Personales (Facturación)</h3>
+        <form onSubmit={handleSaveProfile}>
+          <div style={{display: 'flex', gap: '12px', marginBottom: '12px'}}>
+            <input type="text" name="nombre" placeholder="Nombre" value={profileData.nombre} onChange={handleProfileChange} style={{flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1'}} required />
+            <input type="text" name="apellido" placeholder="Apellido" value={profileData.apellido} onChange={handleProfileChange} style={{flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1'}} required />
+          </div>
+          <div style={{marginBottom: '12px'}}>
+            <input type="text" name="cedula" placeholder="Cédula (Ej. V-12345678)" value={profileData.cedula} onChange={handleProfileChange} style={{width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1'}} required />
+          </div>
+          <div style={{marginBottom: '16px'}}>
+            <input type="tel" name="telefono" placeholder="Teléfono" value={profileData.telefono} onChange={handleProfileChange} style={{width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1'}} required />
+          </div>
+          <button type="submit" disabled={savingProfile} style={{width: '100%', background: '#0f172a', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'}}>
+            {savingProfile ? 'Guardando...' : 'Guardar Datos Personales'}
+          </button>
+        </form>
+      </div>
+
+      <div style={{display: 'flex', gap: '12px', marginBottom: '20px'}}>
+        <button 
+          onClick={() => setActiveTab('orders')}
+          style={{flex: 1, padding: '12px', background: activeTab === 'orders' ? '#10b981' : '#f8fafc', color: activeTab === 'orders' ? '#fff' : '#64748b', border: activeTab === 'orders' ? 'none' : '1px solid #e2e8f0', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'}}
+        >
+          <History size={18} /> Pedidos
+        </button>
+        <button 
+          onClick={() => setActiveTab('addresses')}
+          style={{flex: 1, padding: '12px', background: activeTab === 'addresses' ? '#10b981' : '#f8fafc', color: activeTab === 'addresses' ? '#fff' : '#64748b', border: activeTab === 'addresses' ? 'none' : '1px solid #e2e8f0', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'}}
+        >
+          <MapPin size={18} /> Direcciones Guardadas
+        </button>
+      </div>
+
+      {activeTab === 'orders' && (
+        <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+          {myOrders.length === 0 ? (
+            <div style={{textAlign: 'center', padding: '40px 20px', color: '#64748b', background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0'}}>
+              <ShoppingBag size={48} style={{opacity: 0.2, marginBottom: '16px'}} />
+              <p>Aún no tienes pedidos registrados.</p>
+            </div>
+          ) : (
+            myOrders.map(order => (
+              <div key={order.id} style={{background: '#fff', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px'}}>
+                  <div>
+                    <p style={{fontSize: '12px', color: '#64748b', marginBottom: '4px'}}>
+                      {new Date(order.created_at).toLocaleDateString()} - {new Date(order.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </p>
+                    <h4 style={{fontSize: '16px', fontWeight: 800}}>${Number(order.total_amount).toFixed(2)}</h4>
+                  </div>
+                  <span style={{background: `${getStatusColor(order.status)}20`, color: getStatusColor(order.status), padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold', textTransform: 'capitalize'}}>
+                    {order.status}
+                  </span>
+                </div>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                  {order.items.map((item, idx) => (
+                    <div key={idx} style={{display: 'flex', justifyContent: 'space-between', fontSize: '13px'}}>
+                      <span><span style={{color: '#10b981', fontWeight: 'bold'}}>{item.quantity || 1}x</span> {item.name}</span>
+                      <span style={{color: '#64748b'}}>${Number(item.price).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {activeTab === 'addresses' && (
+        <div style={{background: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
+            <h4 style={{margin: 0}}>Mis Direcciones de Entrega</h4>
+            <button onClick={() => setShowAddAddressModal(true)} style={{background: '#10b981', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'}}>
+              + Nueva Dirección
+            </button>
+          </div>
+
+          {addresses.length === 0 ? (
+            <p style={{color: '#64748b', fontSize: '14px', textAlign: 'center', padding: '20px 0'}}>No tienes direcciones guardadas.</p>
+          ) : (
+            <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+              {addresses.map(addr => (
+                <div key={addr.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+                  <div>
+                    <p style={{fontSize: '14px', fontWeight: 'bold', margin: '0 0 4px 0'}}>{addr.direccion}</p>
+                    {addr.lat && <span style={{fontSize: '11px', color: '#10b981'}}>📍 Con coordenadas GPS guardadas</span>}
+                  </div>
+                  <button onClick={() => handleDeleteAddress(addr.id)} style={{background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer'}}>
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* MODAL PARA AGREGAR NUEVA DIRECCIÓN */}
+          {showAddAddressModal && (
+            <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'}}>
+              <div style={{background: '#fff', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '400px'}}>
+                <h4 style={{marginBottom: '16px'}}>Guardar Nueva Dirección</h4>
+                <form onSubmit={handleSaveAddress}>
+                  <textarea 
+                    placeholder="Ej. Urb. El Picacho, Res. Los Pinos, Torre A, Apto 42" 
+                    value={newAddressText} 
+                    onChange={(e) => setNewAddressText(e.target.value)} 
+                    style={{width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '12px', minHeight: '80px'}}
+                    required 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleGetLocationForAddress}
+                    disabled={isLocating}
+                    style={{width: '100%', padding: '10px', background: newCoords ? '#d1fae5' : '#f1f5f9', color: newCoords ? '#059669' : '#475569', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', marginBottom: '16px', cursor: 'pointer'}}
+                  >
+                    {isLocating ? 'Buscando GPS...' : (newCoords ? '✓ GPS Capturado' : '📍 Capturar Ubicación GPS Actual')}
+                  </button>
+                  <div style={{display: 'flex', gap: '8px'}}>
+                    <button type="button" onClick={() => setShowAddAddressModal(false)} style={{flex: 1, padding: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer'}}>Cancelar</button>
+                    <button type="submit" style={{flex: 1, padding: '10px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'}}>Guardar</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+};
+
+// =========================================================================
+// 3. ENRUTADOR PRINCIPAL CON SUPABASE
+// =========================================================================
+
+function MainApp() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [cart, setCart] = useState([]);
+  
+  const [restaurants, setRestaurants] = useState([]);
+  const [suggestedDishes, setSuggestedDishes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    async function fetchData() {
+      try {
+        const { data: rests } = await supabase
+          .from('stores')
+          .select('*')
+          .eq('krono_enabled', true);
+          
+        if (rests) setRestaurants(rests);
+
+        const { data: dishes } = await supabase
+          .from('products')
+          .select('*, stores!inner(id, name, krono_enabled)') 
+          .eq('show_in_krono', true)
+          .eq('stores.krono_enabled', true);
+
+        if (dishes) {
+          const formattedDishes = dishes.map(d => ({
+            id: d.id,
+            name: d.name,
+            price: d.krono_preferential_price ? Number(d.krono_preferential_price) : Number(d.price),
+            originalPrice: d.krono_preferential_price ? Number(d.price) : null,
+            img: d.image_url || d.img, 
+            restaurant: d.stores?.name || 'Krono Market',
+            store_id: d.stores?.id 
+          }));
+          setSuggestedDishes(formattedDishes);
+        }
+      } catch (error) {
+        console.error("Error cargando Supabase:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchData();
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const featuredRestaurants = restaurants.filter(r => r.is_featured);
+  const allRestaurants = restaurants.filter(r => !r.is_featured);
+  
+  const filteredRestaurants = restaurants.filter(rest => 
+    rest.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    rest.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const addToCart = (dish) => {
+    setCart([...cart, { ...dish, cartId: Date.now() }]);
+  };
+
+  const removeFromCart = (cartId) => {
+    setCart(cart.filter(item => item.cartId !== cartId));
+  };
+
+  const clearCart = () => setCart([]);
+
+  const cartTotal = cart.reduce((total, item) => total + Number(item.price), 0);
+
+  return (
+    <div className="market-layout">
+      <Header 
+        cartCount={cart.length} 
+        searchQuery={searchQuery} 
+        setSearchQuery={setSearchQuery} 
+      />
+      
+      <main className="market-main">
+        <Routes>
+          <Route path="/" element={
+            <HomeView 
+              setSearchQuery={setSearchQuery} 
+              addToCart={addToCart}
+              suggestedDishes={suggestedDishes}
+              featuredRestaurants={featuredRestaurants}
+              allRestaurants={allRestaurants}
+              loading={loading}
+            />
+          } />
+          <Route path="/buscar" element={<SearchView filteredRestaurants={filteredRestaurants} />} />
+          <Route path="/carrito" element={<CartView cart={cart} removeFromCart={removeFromCart} cartTotal={cartTotal} user={user} clearCart={clearCart} />} />
+          <Route path="/perfil" element={<ProfileView user={user} />} />
+        </Routes>
+      </main>
+
+      <Footer />
+      <BottomNav cartCount={cart.length} />
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <MainApp />
+    </Router>
+  );
+}
